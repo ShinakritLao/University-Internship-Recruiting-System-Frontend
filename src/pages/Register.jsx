@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { register } from "../services/api";
+import { isStrongPassword, passwordRequirementsMessage } from "../services/validation";
 import "../styles/auth.css";
 
 export default function Register() {
@@ -49,8 +50,8 @@ export default function Register() {
       setError("Please enter password");
       return false;
     }
-    if (form.password.length < 6) {
-      setError("Password must be at least 6 characters");
+    if (!isStrongPassword(form.password)) {
+      setError(passwordRequirementsMessage());
       return false;
     }
     if (form.password !== form.confirm_password) {

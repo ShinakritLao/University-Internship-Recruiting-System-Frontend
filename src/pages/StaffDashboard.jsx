@@ -1,14 +1,13 @@
 import { useNavigate } from "react-router-dom";
+import { clearAuth, getEmail } from "../services/auth";
 import "../styles/dashboard.css";
 
 export default function StaffDashboard() {
   const navigate = useNavigate();
-  const email = localStorage.getItem("email") || "Staff";
+  const email = getEmail() || "Staff";
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("email");
-    localStorage.removeItem("role");
+    clearAuth();
     navigate("/login");
   };
 
@@ -17,7 +16,7 @@ export default function StaffDashboard() {
       <div className="dashboard-header">
         <h1>Staff Dashboard</h1>
         <div className="header-info">
-          <span className="role-badge">Staff</span>
+          <span className="role-badge">Admin</span>
           <span className="email-info">{email}</span>
           <button onClick={handleLogout} className="logout-btn">
             Logout

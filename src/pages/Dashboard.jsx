@@ -1,13 +1,13 @@
 import { useNavigate } from "react-router-dom";
+import { clearAuth, getEmail } from "../services/auth";
 import "../styles/dashboard.css";
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const email = localStorage.getItem("email") || "User";
+  const email = getEmail() || "User";
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("email");
+    clearAuth();
     navigate("/login");
   };
 

@@ -1,14 +1,13 @@
 import { useNavigate } from "react-router-dom";
+import { clearAuth, getEmail } from "../services/auth";
 import "../styles/dashboard.css";
 
 export default function StudentDashboard() {
   const navigate = useNavigate();
-  const email = localStorage.getItem("email") || "Student";
+  const email = getEmail() || "Student";
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("email");
-    localStorage.removeItem("role");
+    clearAuth();
     navigate("/login");
   };
 

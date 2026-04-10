@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { login } from "../services/api";
+import { saveAuth } from "../services/auth";
 import "../styles/auth.css";
 
 export default function Login() {
@@ -42,9 +43,11 @@ export default function Login() {
       console.log("Login response:", res);
 
       if (res.token) {
-        localStorage.setItem("token", res.token);
-        localStorage.setItem("email", email);
-        localStorage.setItem("role", res.role || "student");
+        saveAuth({
+          token: res.token,
+          role: res.role || "student",
+          email
+        });
         alert("Login success!");
         
         // Redirect ตามโรล
@@ -111,6 +114,10 @@ export default function Login() {
         <button onClick={handleLogin} disabled={loading}>
           {loading ? "Loading..." : "Login"}
         </button>
+
+        <p className="auth-link">
+          <Link to="/reset-password">Forgot password?</Link>
+        </p>
 
         <p className="auth-link">
           Don't have account? <Link to="/register">Register here</Link>
