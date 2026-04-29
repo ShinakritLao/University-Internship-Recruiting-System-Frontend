@@ -46,7 +46,8 @@ export default function Login() {
         saveAuth({
           token: res.token,
           role: res.role || "student",
-          email
+          email,
+          firstName: res.firstName
         });
         alert("Login success!");
         
