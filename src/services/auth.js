@@ -1,17 +1,20 @@
 const TOKEN_KEY = "token";
 const ROLE_KEY = "role";
 const EMAIL_KEY = "email";
+const FIRSTNAME_KEY = "firstName";
 
-export function saveAuth({ token, role, email }) {
+export function saveAuth({ token, role, email, firstName }) {
   if (token) localStorage.setItem(TOKEN_KEY, token);
   if (role) localStorage.setItem(ROLE_KEY, role);
   if (email) localStorage.setItem(EMAIL_KEY, email);
+  if (firstName) localStorage.setItem(FIRSTNAME_KEY, firstName);
 }
 
 export function clearAuth() {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(ROLE_KEY);
   localStorage.removeItem(EMAIL_KEY);
+  localStorage.removeItem(FIRSTNAME_KEY);
 }
 
 export function getToken() {
@@ -24,6 +27,10 @@ export function getRole() {
 
 export function getEmail() {
   return localStorage.getItem(EMAIL_KEY);
+}
+
+export function getFirstName() {
+  return localStorage.getItem(FIRSTNAME_KEY);
 }
 
 export function isLoggedIn() {

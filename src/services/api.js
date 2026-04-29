@@ -2,68 +2,61 @@ import { getAuthHeaders } from "./auth";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
-export async function register(data) {
+async function request(path, method = "GET", body = null) {
   try {
-    const res = await fetch(`${API_URL}/register`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...getAuthHeaders()
-      },
-      body: JSON.stringify(data)
-    });
-
-    if (!res.ok) {
-      console.error("Register failed:", res.status, res.statusText);
-    }
-
+    const options = {
+      method,
+      headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+    };
+    if (body) options.body = JSON.stringify(body);
+    const res = await fetch(`${API_URL}${path}`, options);
     return res.json();
   } catch (error) {
-    console.error("Register error:", error);
     return { error: error.message };
   }
 }
 
-export async function login(data) {
+async function uploadRequest(path, formData) {
   try {
-    const res = await fetch(`${API_URL}/login`, {
+    const res = await fetch(`${API_URL}${path}`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...getAuthHeaders()
-      },
-      body: JSON.stringify(data)
+      headers: { ...getAuthHeaders() },
+      body: formData,
     });
-
-    if (!res.ok) {
-      console.error("Login failed:", res.status, res.statusText);
-    }
-
     return res.json();
   } catch (error) {
-    console.error("Login error:", error);
     return { error: error.message };
   }
 }
 
-export async function resetPassword(data) {
-  try {
-    const res = await fetch(`${API_URL}/reset-password`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...getAuthHeaders()
-      },
-      body: JSON.stringify(data)
-    });
+// Auth
+export const register = (data) => request("/register", "POST", data);
+export const login = (data) => request("/login", "POST", data);
+export const resetPassword = (data) => request("/reset-password", "POST", data);
 
-    if (!res.ok) {
-      console.error("Reset password failed:", res.status, res.statusText);
-    }
+// Company — MOU
+export const createMOURequest = (formData) => uploadRequest("/mou-requests", formData);
+export const getMyMOU = () => request("/mou-requests/my");
 
-    return res.json();
-  } catch (error) {
-    console.error("Reset password error:", error);
-    return { error: error.message };
-  }
-}
+// Company — Internships
+export const createInternship = (data) => request("/internships", "POST", data);
+export const updateInternship = (id, data) => request(`/internships/${id}`, "PUT", data);
+export const deleteInternship = (id) => request(`/internships/${id}`, "DELETE");
+export const getMyInternships = () => request("/internships/my");
+
+// Company — Applications
+export const getApplicationsForInternship = (internshipId) => request(`/internships/${internshipId}/applications`);
+export const updateApplicationStatus = (applicationId, status) => request(`/applications/${applicationId}/status`, "PUT", { status });
+
+// Staff — MOU
+export const getAllMOURequests = () => request("/mou-requests");
+export const updateMOUStatus = (mouId, status, rejectionReason = "") =>
+  request(`/mou-requests/${mouId}/status`, "PUT", { status, rejectionReason });
+
+// Staff — Internships
+export const getPendingInternships = () => request("/internships/pending");
+export const updateInternshipStatus = (internshipId, status, rejectionReason = "") =>
+  request(`/internships/${internshipId}/status`, "PUT", { status, rejectionReason });
+
+// Staff — Applications
+export const getAllApplications = () => request("/applications");
