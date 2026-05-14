@@ -45,18 +45,54 @@ export const deleteInternship = (id) => request(`/internships/${id}`, "DELETE");
 export const getMyInternships = () => request("/internships/my");
 
 // Company — Applications
-export const getApplicationsForInternship = (internshipId) => request(`/internships/${internshipId}/applications`);
-export const updateApplicationStatus = (applicationId, status) => request(`/applications/${applicationId}/status`, "PUT", { status });
+export const getApplicationsForInternship = (internshipId) =>
+  request(`/internships/${internshipId}/applications`);
+
+export const updateApplicationStatus = (applicationId, status) =>
+  request(`/applications/${applicationId}/status`, "PUT", { status });
+
+// Student — Internships
+export const getApprovedInternships = () =>
+  request("/internships/approved");
+
+// Student — Applications
+export const applyForInternship = (internshipId, formData) =>
+  uploadRequest(`/internships/${internshipId}/apply`, formData);
+
+export const getMyApplications = () =>
+  request("/applications/my");
+
+// Student — Profile
+export const getMyProfile = () =>
+  request("/profile/my");
 
 // Staff — MOU
 export const getAllMOURequests = () => request("/mou-requests");
-export const updateMOUStatus = (mouId, status, rejectionReason = "") =>
-  request(`/mou-requests/${mouId}/status`, "PUT", { status, rejectionReason });
+
+export const updateMOUStatus = (
+  mouId,
+  status,
+  rejectionReason = ""
+) =>
+  request(`/mou-requests/${mouId}/status`, "PUT", {
+    status,
+    rejectionReason,
+  });
 
 // Staff — Internships
-export const getPendingInternships = () => request("/internships/pending");
-export const updateInternshipStatus = (internshipId, status, rejectionReason = "") =>
-  request(`/internships/${internshipId}/status`, "PUT", { status, rejectionReason });
+export const getPendingInternships = () =>
+  request("/internships/pending");
+
+export const updateInternshipStatus = (
+  internshipId,
+  status,
+  rejectionReason = ""
+) =>
+  request(`/internships/${internshipId}/status`, "PUT", {
+    status,
+    rejectionReason,
+  });
 
 // Staff — Applications
-export const getAllApplications = () => request("/applications");
+export const getAllApplications = () =>
+  request("/applications");
