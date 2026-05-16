@@ -7,6 +7,7 @@ import {
   getMyApplications,
   getMyProfile,
   confirmApplication,
+  getMyNotifications
 } from "../services/api";
 
 import Pagination, { paginate } from "../components/Pagination";
@@ -18,12 +19,61 @@ export default function StudentDashboard() {
   const navigate = useNavigate();
   const email = getEmail() || "Student";
   const firstName = getFirstName() || email;
+  const [notifications, setNotifications] = useState([]);
+  const [showNotif, setShowNotif] = useState(false);
 
   const [activeTab, setActiveTab] = useState("internships");
+  const unreadCount = notifications.filter(n => !n.is_read).length;
 
   const handleLogout = () => {
     clearAuth();
     navigate("/login");
+  };
+
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      const data = await getMyNotifications();
+      setNotifications(Array.isArray(data) ? data : []);
+    };
+
+    fetchNotifications();
+
+    const interval = setInterval(fetchNotifications, 10000); // auto refresh
+    return () => clearInterval(interval);
+  }, []);
+
+  const markAsRead = async (id) => {
+    await fetch(`${import.meta.env.VITE_API_URL}/notifications/${id}/read`, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+      },
+    });
+
+    setNotifications(prev =>
+      prev.map(n =>
+        n.id === id ? { ...n, is_read: true } : n
+      )
+    );
+  };
+
+  const markAllAsRead = async () => {
+  const unread = notifications.filter(n => !n.is_read);
+
+    await Promise.all(
+      unread.map((n) =>
+        fetch(`${import.meta.env.VITE_API_URL}/notifications/${n.id}/read`, {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        })
+      )
+    );
+
+    setNotifications(prev =>
+      prev.map(n => ({ ...n, is_read: true }))
+    );
   };
 
   return (
@@ -35,13 +85,109 @@ export default function StudentDashboard() {
             Browse internships and manage your applications
           </p>
         </div>
+        <div className="header-info" style={{ position: "relative" }}>
 
-        <div className="header-info">
+          {/* 🔔 Bell Button */}
+          <button
+            onClick={() => {
+              const next = !showNotif;
+              setShowNotif(next);
+
+              if (next) {
+                markAllAsRead();
+              } else {
+                setShowNotif(false);
+              }
+            }}
+            style={{
+              position: "relative",
+              marginRight: 10,
+              fontSize: 18,
+              background: "transparent",
+              border: "none",
+              outline: "none",
+              boxShadow: "none",
+              WebkitAppearance: "none",
+              cursor: "pointer"
+            }}
+          >
+            🔔
+
+            {/* 🔴 unread badge */}
+            {notifications.filter(n => !n.is_read).length > 0 && (
+              <span
+                style={{
+                  position: "absolute",
+                  top: -5,
+                  right: -5,
+                  background: "red",
+                  color: "white",
+                  borderRadius: "50%",
+                  fontSize: 12,
+                  width: 18,
+                  height: 18,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center"
+                }}
+              >
+                {notifications.filter(n => !n.is_read).length}
+              </span>
+            )}
+          </button>
+
           <span className="role-badge">Student</span>
           <span className="email-info">Welcome, {firstName}</span>
+
           <button onClick={handleLogout} className="logout-btn">
             Logout
           </button>
+
+          {/* 🔽 Notification dropdown */}
+          {showNotif && (
+            <div
+              style={{
+                position: "absolute",
+                top: 50,
+                right: 0,
+                width: 320,
+                background: "white",
+                border: "1px solid #ddd",
+                borderRadius: 10,
+                boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                zIndex: 999
+              }}
+            >
+              <div style={{ padding: 10, borderBottom: "1px solid #eee" }}>
+                <strong>Notifications</strong>
+              </div>
+
+              <div style={{ maxHeight: 300, overflowY: "auto" }}>
+                {notifications.length === 0 ? (
+                  <div style={{ padding: 10 }}>No notifications</div>
+                ) : (
+                  notifications.map((n) => (
+                    <div
+                      key={n.id}
+                      onClick={() => markAsRead(n.id)}
+                      style={{
+                        padding: 10,
+                        borderBottom: "1px solid #f0f0f0",
+                        background: n.is_read ? "#fff" : "#f9f9f9",
+                        cursor: "pointer"
+                      }}
+                    >
+                      <div style={{ fontSize: 14 }}>{n.message}</div>
+                      <div style={{ fontSize: 12, color: "#888" }}>
+                        {new Date(n.created_at).toLocaleString()}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+
         </div>
       </div>
 
@@ -612,11 +758,10 @@ function ProfileTab() {
           </div>
 
           <div>
-            <strong>Faculty:</strong> {profile.faculty}
-          </div>
-
-          <div>
-            <strong>Major:</strong> {profile.major}
+            <strong>Internship Program:</strong>{" "}
+            {profile.internship
+              ? profile.internship
+              : "No internship program confirmed"}
           </div>
         </div>
       </div>

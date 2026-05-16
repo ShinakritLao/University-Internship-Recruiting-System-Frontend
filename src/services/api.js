@@ -102,3 +102,14 @@ export const updateInternshipStatus = (
 // Staff — Applications
 export const getAllApplications = () =>
   request("/applications");
+
+export async function getMyNotifications() {
+  const res = await fetch(`${import.meta.env.VITE_API_URL}/notifications/my`, {
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem("token")}`,
+    },
+  });
+
+  return await res.json();
+}
+
