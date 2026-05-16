@@ -315,6 +315,19 @@
   transition: all 0.2s;
 }
 
+.btn-danger {
+  background: #dc2626;
+  color: white;
+  border: none;
+  padding: 10px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.btn-danger:hover {
+  opacity: 0.9;
+}
+
 .btn-reject:hover { background: #bb2d3b; transform: translateY(-1px); }
 
 .btn-approve:disabled,

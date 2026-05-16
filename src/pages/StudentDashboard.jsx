@@ -6,6 +6,7 @@ import {
   applyForInternship,
   getMyApplications,
   getMyProfile,
+  confirmApplication,
 } from "../services/api";
 
 import Pagination, { paginate } from "../components/Pagination";
@@ -183,12 +184,18 @@ function InternshipsTab() {
                 <p>{p.description}</p>
 
                 <div className="posting-card-actions">
-                  <button
-                    className="btn-primary"
-                    onClick={() => setSelected(p)}
-                  >
-                    Apply Now
-                  </button>
+                  {new Date(p.deadline) > new Date() ? (
+                    <button
+                      className="btn-primary"
+                      onClick={() => setSelected(p)}
+                    >
+                      Apply Now
+                    </button>
+                  ) : (
+                    <button className="btn-secondary" disabled>
+                      Deadline Passed
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -292,6 +299,8 @@ function ApplicationsTab() {
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const [selected, setSelected] = useState(null);
+
   useEffect(() => {
     fetchApplications();
   }, []);
@@ -304,6 +313,64 @@ function ApplicationsTab() {
     setApplications(Array.isArray(data) ? data : []);
 
     setLoading(false);
+  };
+
+  const handleConfirm = async (applicationId) => {
+  const confirmed = window.confirm(
+    "Are you sure you want to confirm this internship?\nYou can only belong to ONE company."
+  );
+
+  if (!confirmed) return;
+
+  const res = await confirmApplication(applicationId);
+
+    if (res.error) {
+      alert(res.error);
+      return;
+    }
+
+    alert("Internship confirmed successfully!");
+
+    setSelected(null);
+
+    fetchApplications();
+  };
+
+  const handleDelete = async (id) => {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this application?"
+    );
+
+    if (!confirmed) return;
+
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_API_URL}/applications/${id}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+
+      const data = await res.json();
+
+      if (data.error) {
+        alert(data.error);
+        return;
+      }
+
+      setApplications(
+        applications.filter((app) => app.id !== id)
+      );
+
+      setSelected(null);
+
+      alert("Application deleted");
+    } catch (err) {
+      alert("Failed to delete application");
+    }
   };
 
   if (loading) return <p>Loading applications...</p>;
@@ -320,33 +387,172 @@ function ApplicationsTab() {
           <p>You have not applied to any internships yet.</p>
         </div>
       ) : (
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Internship</th>
-              <th>Applied On</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {applications.map((app) => (
-              <tr key={app.id}>
-                <td>{app.internshipTitle}</td>
-
-                <td>
-                  {new Date(app.applyDate).toLocaleDateString()}
-                </td>
-
-                <td>
-                  <span className={`status-badge ${app.status}`}>
-                    {app.status}
-                  </span>
-                </td>
+        <>
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Internship</th>
+                <th>Applied On</th>
+                <th>Status</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+
+            <tbody>
+              {applications.map((app) => (
+                <tr
+                  key={app.id}
+                  onClick={() => setSelected(app)}
+                  style={{ cursor: "pointer" }}
+                >
+                  <td>{app.internshipTitle}</td>
+
+                  <td>
+                    {new Date(app.applyDate).toLocaleDateString()}
+                  </td>
+
+                  <td>
+                    <span className={`status-badge ${app.status}`}>
+                      {app.status}
+                    </span>
+                  </td>
+
+                  <td
+                    style={{
+                      cursor: "pointer",
+                      fontWeight: 600,
+                      color: "#2563eb",
+                    }}
+                    onClick={() => setSelected(app)}
+                  >
+                    
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {selected && (
+            <div
+              className="modal-backdrop"
+              onClick={() => setSelected(null)}
+            >
+              <div
+                className="modal-card"
+                style={{ maxWidth: 700 }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <h3>Application Details</h3>
+
+                <div className="detail-grid">
+                  <div>
+                    <strong>Internship:</strong>{" "}
+                    {selected.internshipTitle}
+                  </div>
+
+                  <div>
+                    <strong>Status:</strong>{" "}
+                    {selected.status}
+                  </div>
+
+                  <div>
+                    <strong>Applied Date:</strong>{" "}
+                    {new Date(
+                      selected.applyDate
+                    ).toLocaleDateString()}
+                  </div>
+                </div>
+
+                <div
+                  className="form-group"
+                  style={{ marginTop: 20 }}
+                >
+                  <label>Description</label>
+
+                  <div
+                    style={{
+                      background: "#f5f5f5",
+                      padding: 12,
+                      borderRadius: 8,
+                    }}
+                  >
+                    {selected.description || "No description"}
+                  </div>
+                </div>
+
+                <div
+                  className="form-group"
+                  style={{ marginTop: 20 }}
+                >
+                  <label>Uploaded Documents</label>
+
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 12,
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    {selected.cvPath && (
+                      <a
+                        href={selected.cvPath}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="btn-secondary"
+                      >
+                        View CV
+                      </a>
+                    )}
+
+                    {selected.transcriptPath && (
+                      <a
+                        href={selected.transcriptPath}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="btn-secondary"
+                      >
+                        View Transcript
+                      </a>
+                    )}
+                  </div>
+                </div>
+
+                <div
+                  className="modal-actions"
+                  style={{ marginTop: 24 }}
+                >
+                  <button
+                    className="btn-secondary"
+                    onClick={() => setSelected(null)}
+                  >
+                    Close
+                  </button>
+
+                  {selected.status == "accepted" && (
+                    <button
+                      className="btn-primary"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleConfirm(selected.id);
+                      }}
+                    >
+                      Confirm Internship
+                    </button>
+                  )}
+
+                  {(selected.status === "submitted" ||
+                    selected.status === "under-review") && (
+                    <button
+                      className="btn-danger"
+                      onClick={() => handleDelete(selected.id)}
+                    >
+                      Delete Application
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

@@ -66,6 +66,12 @@ export const getMyApplications = () =>
 export const getMyProfile = () =>
   request("/profile/my");
 
+export const deleteMyApplication = (id) =>
+  request(`/applications/${id}`, "DELETE");
+
+export const confirmApplication = (id) =>
+  request(`/applications/${id}/confirm`, "PUT");
+
 // Staff — MOU
 export const getAllMOURequests = () => request("/mou-requests");
 
