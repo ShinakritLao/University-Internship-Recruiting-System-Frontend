@@ -115,7 +115,6 @@ function InternshipsTab() {
     setMessage("");
 
     const formData = new FormData();
-
     formData.append("description", description);
 
     if (cv) formData.append("cv", cv);
@@ -132,7 +131,6 @@ function InternshipsTab() {
       setDescription("");
       setCv(null);
       setTranscript(null);
-      setSelected(null);
     }
 
     setSubmitting(false);
@@ -187,7 +185,10 @@ function InternshipsTab() {
                   {new Date(p.deadline) > new Date() ? (
                     <button
                       className="btn-primary"
-                      onClick={() => setSelected(p)}
+                      onClick={() => {
+                        setSelected(p);
+                        setMessage(""); // 🔥 THIS is the missing piece
+                      }}
                     >
                       Apply Now
                     </button>
