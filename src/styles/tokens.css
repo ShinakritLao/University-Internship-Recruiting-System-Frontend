@@ -1,0 +1,168 @@
+/* ============================================================================
+   Design Tokens — Linear/Vercel-inspired minimal, orange accent
+   These CSS variables are the single source of truth for the new design system.
+   All pages consume these tokens via var(--token-name).
+   ============================================================================ */
+
+:root {
+  /* ── Brand: warm orange accent ─────────────────────────────────────────── */
+  --color-accent-50:  #fff7ed;
+  --color-accent-100: #ffedd5;
+  --color-accent-200: #fed7aa;
+  --color-accent-300: #fdba74;
+  --color-accent-400: #fb923c;
+  --color-accent-500: #f97316;  /* primary */
+  --color-accent-600: #ea580c;  /* hover  */
+  --color-accent-700: #c2410c;  /* active */
+  --color-accent-800: #9a3412;
+  --color-accent-900: #7c2d12;
+
+  /* ── Neutrals: cool slate, Linear-style ────────────────────────────────── */
+  --color-neutral-0:   #ffffff;
+  --color-neutral-25:  #fcfcfd;
+  --color-neutral-50:  #f8fafc;
+  --color-neutral-100: #f1f5f9;
+  --color-neutral-150: #e9eef4;
+  --color-neutral-200: #e2e8f0;
+  --color-neutral-300: #cbd5e1;
+  --color-neutral-400: #94a3b8;
+  --color-neutral-500: #64748b;
+  --color-neutral-600: #475569;
+  --color-neutral-700: #334155;
+  --color-neutral-800: #1e293b;
+  --color-neutral-900: #0f172a;
+  --color-neutral-950: #020617;
+
+  /* ── Semantic surface & text ───────────────────────────────────────────── */
+  --color-bg:           var(--color-neutral-50);
+  --color-bg-subtle:    var(--color-neutral-100);
+  --color-surface:      var(--color-neutral-0);
+  --color-surface-alt:  var(--color-neutral-25);
+  --color-border:       var(--color-neutral-200);
+  --color-border-strong: var(--color-neutral-300);
+  --color-text:         var(--color-neutral-900);
+  --color-text-muted:   var(--color-neutral-500);
+  --color-text-subtle:  var(--color-neutral-400);
+  --color-text-inverse: var(--color-neutral-0);
+
+  /* ── Status colors (semantic, all with subtle bg + strong fg) ──────────── */
+  --color-success-bg: #ecfdf5;
+  --color-success-fg: #047857;
+  --color-success-border: #a7f3d0;
+
+  --color-warning-bg: #fffbeb;
+  --color-warning-fg: #b45309;
+  --color-warning-border: #fde68a;
+
+  --color-danger-bg:  #fef2f2;
+  --color-danger-fg:  #b91c1c;
+  --color-danger-border: #fecaca;
+
+  --color-info-bg:    #eff6ff;
+  --color-info-fg:    #1d4ed8;
+  --color-info-border: #bfdbfe;
+
+  --color-neutral-bg: var(--color-neutral-100);
+  --color-neutral-fg: var(--color-neutral-700);
+
+  /* ── Focus ring ────────────────────────────────────────────────────────── */
+  --focus-ring: 0 0 0 3px rgba(249, 115, 22, 0.25);
+
+  /* ── Spacing scale (4px base, 8px primary rhythm) ──────────────────────── */
+  --space-0:  0;
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-24: 96px;
+
+  /* ── Radius ────────────────────────────────────────────────────────────── */
+  --radius-xs:  4px;
+  --radius-sm:  6px;
+  --radius-md:  8px;
+  --radius-lg:  10px;
+  --radius-xl:  12px;
+  --radius-2xl: 16px;
+  --radius-full: 9999px;
+
+  /* ── Shadows: subtle, layered, Linear-style ────────────────────────────── */
+  --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 2px 4px rgba(15, 23, 42, 0.04), 0 4px 12px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 4px 8px rgba(15, 23, 42, 0.04), 0 12px 24px rgba(15, 23, 42, 0.10);
+  --shadow-xl: 0 8px 16px rgba(15, 23, 42, 0.06), 0 24px 48px rgba(15, 23, 42, 0.14);
+  --shadow-focus: var(--focus-ring);
+
+  /* ── Typography ────────────────────────────────────────────────────────── */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+               Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas,
+               'Liberation Mono', monospace;
+
+  --text-xs:   12px;
+  --text-sm:   13px;
+  --text-base: 14px;
+  --text-md:   15px;
+  --text-lg:   16px;
+  --text-xl:   18px;
+  --text-2xl:  22px;
+  --text-3xl:  28px;
+  --text-4xl:  36px;
+
+  --leading-tight:   1.2;
+  --leading-snug:    1.35;
+  --leading-normal:  1.5;
+  --leading-relaxed: 1.65;
+
+  --weight-regular:  400;
+  --weight-medium:   500;
+  --weight-semibold: 600;
+  --weight-bold:     700;
+
+  --tracking-tight:  -0.01em;
+  --tracking-normal: 0;
+
+  /* ── Motion ────────────────────────────────────────────────────────────── */
+  --ease-out:    cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --duration-fast:    120ms;
+  --duration-base:    200ms;
+  --duration-slow:    320ms;
+
+  /* ── Z-index scale ─────────────────────────────────────────────────────── */
+  --z-base:     1;
+  --z-dropdown: 100;
+  --z-sticky:   200;
+  --z-overlay:  900;
+  --z-modal:    1000;
+  --z-toast:    1100;
+
+  /* ── Layout ────────────────────────────────────────────────────────────── */
+  --sidebar-width:    240px;
+  --header-height:    60px;
+  --container-max:    1440px;
+}
+
+/* ── Base resets that play nice with the legacy CSS ────────────────────── */
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Accessible focus styles for new components */
+*:focus-visible {
+  outline: 2px solid var(--color-accent-500);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
+}

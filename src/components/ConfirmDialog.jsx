@@ -1,12 +1,15 @@
 import { useEffect, useState } from "react";
+import { Modal } from "./ui/Modal";
+import { Button } from "./ui/Button";
+import { Textarea } from "./ui/Textarea";
 
 /**
- * Reusable confirmation modal.
+ * Reusable confirmation modal — same API as before, now uses the new design system.
  *
  * Props:
  *   open               - whether dialog is visible
  *   title              - heading text
- *   message            - body text
+ *   message            - body text (string or node)
  *   confirmLabel       - text for confirm button (default "Confirm")
  *   confirmVariant     - "primary" | "danger" (default "primary")
  *   requireReason      - if true, shows a reason textarea; onConfirm receives the reason
@@ -37,8 +40,6 @@ export default function ConfirmDialog({
     }
   }, [open]);
 
-  if (!open) return null;
-
   const handleConfirm = async () => {
     if (requireReason && !reason.trim()) {
       setError("Please provide a reason.");
@@ -53,34 +54,45 @@ export default function ConfirmDialog({
   };
 
   return (
-    <div className="modal-backdrop" onClick={onCancel}>
-      <div className="modal-card" onClick={e => e.stopPropagation()}>
-        <h3>{title}</h3>
-        {message && <p className="modal-message">{message}</p>}
-        {requireReason && (
-          <div className="form-group">
-            <label>Reason <span className="required">*</span></label>
-            <textarea
-              value={reason}
-              onChange={e => setReason(e.target.value)}
-              placeholder={reasonPlaceholder}
-              disabled={busy}
-              autoFocus
-            />
-            {error && <div className="error-msg">{error}</div>}
-          </div>
-        )}
-        <div className="modal-actions">
-          <button className="btn-secondary" onClick={onCancel} disabled={busy}>Cancel</button>
-          <button
-            className={confirmVariant === "danger" ? "btn-reject" : "btn-primary"}
+    <Modal
+      open={open}
+      onClose={busy ? undefined : onCancel}
+      title={title}
+      size="sm"
+      footer={
+        <>
+          <Button variant="secondary" onClick={onCancel} disabled={busy}>
+            Cancel
+          </Button>
+          <Button
+            variant={confirmVariant === "danger" ? "danger" : "primary"}
             onClick={handleConfirm}
-            disabled={busy}
+            loading={busy}
           >
-            {busy ? "..." : confirmLabel}
-          </button>
+            {confirmLabel}
+          </Button>
+        </>
+      }
+    >
+      {message && (
+        <p style={{ margin: 0, color: "var(--color-text-muted)", lineHeight: "var(--leading-normal)" }}>
+          {message}
+        </p>
+      )}
+      {requireReason && (
+        <div style={{ marginTop: message ? "var(--space-4)" : 0 }}>
+          <Textarea
+            label="Reason"
+            required
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder={reasonPlaceholder}
+            disabled={busy}
+            error={error || undefined}
+            autoFocus
+          />
         </div>
-      </div>
-    </div>
+      )}
+    </Modal>
   );
 }

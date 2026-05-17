@@ -1,129 +1,142 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { Mail, Hash, Lock, Eye, EyeOff, AlertCircle, LogIn } from "lucide-react";
+import { toast } from "sonner";
 import { login } from "../services/api";
 import { saveAuth } from "../services/auth";
-import "../styles/auth.css";
+import { AuthLayout } from "../components/layout";
+import { Input, Button } from "../components/ui";
+
+const DASHBOARD_BY_ROLE = {
+  student: "/student-dashboard",
+  company: "/company-dashboard",
+  staff: "/staff-dashboard",
+};
 
 export default function Login() {
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [userID, setUserID] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
 
-  const validateForm = () => {
-    if (!email.trim()) {
-      setError("Please enter email");
-      return false;
-    }
-    if (!userID.trim()) {
-      setError("Please enter user ID");
-      return false;
-    }
-    if (!password.trim()) {
-      setError("Please enter password");
-      return false;
-    }
-    return true;
+  const validate = () => {
+    if (!email.trim()) return "Please enter your email.";
+    if (!userID.trim()) return "Please enter your user ID.";
+    if (!password.trim()) return "Please enter your password.";
+    return null;
   };
 
-  const handleLogin = async () => {
+  const handleSubmit = async (e) => {
+    e?.preventDefault?.();
     setError("");
-    if (!validateForm()) return;
+    const msg = validate();
+    if (msg) {
+      setError(msg);
+      return;
+    }
 
     setLoading(true);
     try {
-      const res = await login({
-        email,
-        password,
-        userId: userID
-      });
+      const res = await login({ email, password, userId: userID });
 
-      console.log("Login response:", res);
-
-      if (res.token) {
+      if (res?.token) {
+        const role = res.role || "student";
         saveAuth({
           token: res.token,
-          role: res.role || "student",
+          role,
           email,
-          firstName: res.firstName
+          firstName: res.firstName,
         });
-        alert("Login success!");
-        
-        // Redirect ตามโรล
-        const role = res.role || "student";
-        if (role === "student") {
-          navigate("/student-dashboard");
-        } else if (role === "company") {
-          navigate("/company-dashboard");
-        } else if (role === "staff") {
-          navigate("/staff-dashboard");
-        }
-      } else if (res.error) {
-        setError(res.error);
+        toast.success(`Welcome back, ${res.firstName || "there"}!`);
+        navigate(DASHBOARD_BY_ROLE[role] || "/student-dashboard");
       } else {
-        setError("Login failed: " + JSON.stringify(res));
+        setError(res?.error || "Login failed. Please try again.");
       }
     } catch (err) {
-      setError("Connection error: " + err.message);
+      setError(`Connection error: ${err.message}`);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleKeyPress = (e) => {
-    if (e.key === "Enter") {
-      handleLogin();
-    }
-  };
-
   return (
-    <div className="auth-container">
-      <div className="auth-form">
-        <h2>Login</h2>
-        
-        {error && <div className="error-message">{error}</div>}
+    <AuthLayout title="Welcome back" subtitle="Sign in to continue to your dashboard.">
+      <form className="auth-form-stack" onSubmit={handleSubmit} noValidate>
+        {error && (
+          <div className="auth-form-error" role="alert">
+            <AlertCircle size={16} style={{ flexShrink: 0, marginTop: 1 }} />
+            <span>{error}</span>
+          </div>
+        )}
 
-        <input
+        <Input
+          label="Email"
           type="email"
-          placeholder="Email"
+          autoComplete="email"
+          required
+          placeholder="you@university.ac.th"
           value={email}
-          onChange={e => setEmail(e.target.value)}
-          onKeyPress={handleKeyPress}
+          onChange={(e) => setEmail(e.target.value)}
           disabled={loading}
+          leadingIcon={<Mail size={16} />}
         />
-        
-        <input
+
+        <Input
+          label="User ID"
           type="text"
-          placeholder="User ID"
+          autoComplete="username"
+          required
+          placeholder="Institutional ID"
           value={userID}
-          onChange={e => setUserID(e.target.value)}
-          onKeyPress={handleKeyPress}
+          onChange={(e) => setUserID(e.target.value)}
           disabled={loading}
+          leadingIcon={<Hash size={16} />}
         />
-        
-        <input
-          type="password"
-          placeholder="Password"
+
+        <Input
+          label="Password"
+          type={showPassword ? "text" : "password"}
+          autoComplete="current-password"
+          required
+          placeholder="Enter your password"
           value={password}
-          onChange={e => setPassword(e.target.value)}
-          onKeyPress={handleKeyPress}
+          onChange={(e) => setPassword(e.target.value)}
           disabled={loading}
+          leadingIcon={<Lock size={16} />}
+          trailingIcon={
+            <button
+              type="button"
+              className="auth-pw-toggle"
+              onClick={() => setShowPassword((s) => !s)}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+              tabIndex={-1}
+            >
+              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
+          }
         />
 
-        <button onClick={handleLogin} disabled={loading}>
-          {loading ? "Loading..." : "Login"}
-        </button>
+        <Button
+          type="submit"
+          variant="primary"
+          size="lg"
+          fullWidth
+          loading={loading}
+          leadingIcon={!loading && <LogIn size={16} />}
+        >
+          {loading ? "Signing in..." : "Sign in"}
+        </Button>
 
-        <p className="auth-link">
-          <Link to="/reset-password">Forgot password?</Link>
-        </p>
-
-        <p className="auth-link">
-          Don't have account? <Link to="/register">Register here</Link>
-        </p>
-      </div>
-    </div>
+        <div className="auth-form-foot">
+          <Link to="/reset-password">Forgot your password?</Link>
+          <span>
+            Don&apos;t have an account? <Link to="/register">Create one</Link>
+          </span>
+        </div>
+      </form>
+    </AuthLayout>
   );
 }

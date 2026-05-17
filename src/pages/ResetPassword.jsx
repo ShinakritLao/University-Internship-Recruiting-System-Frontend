@@ -1,130 +1,156 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import {
+  Mail, Hash, Lock, Eye, EyeOff, AlertCircle, KeyRound,
+} from "lucide-react";
+import { toast } from "sonner";
 import { resetPassword } from "../services/api";
-import { isStrongPassword, passwordRequirementsMessage } from "../services/validation";
-import "../styles/auth.css";
+import {
+  isStrongPassword,
+  passwordRequirementsMessage,
+} from "../services/validation";
+import { AuthLayout } from "../components/layout";
+import { Input, Button } from "../components/ui";
 
 export default function ResetPassword() {
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [userID, setUserID] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
 
-  const validateForm = () => {
-    if (!email.trim()) {
-      setError("Please enter email");
-      return false;
-    }
-    if (!email.includes("@")) {
-      setError("Please enter a valid email");
-      return false;
-    }
-    if (!userID.trim()) {
-      setError("Please enter user ID");
-      return false;
-    }
-    if (!newPassword.trim()) {
-      setError("Please enter a new password");
-      return false;
-    }
-    if (!isStrongPassword(newPassword)) {
-      setError(passwordRequirementsMessage());
-      return false;
-    }
-    if (newPassword !== confirmPassword) {
-      setError("Passwords do not match");
-      return false;
-    }
-    return true;
+  const validate = () => {
+    if (!email.trim()) return "Please enter your email.";
+    if (!email.includes("@")) return "Please enter a valid email.";
+    if (!userID.trim()) return "Please enter your user ID.";
+    if (!newPassword.trim()) return "Please enter a new password.";
+    if (!isStrongPassword(newPassword)) return passwordRequirementsMessage();
+    if (newPassword !== confirmPassword) return "Passwords do not match.";
+    return null;
   };
 
-  const handleResetPassword = async () => {
+  const handleSubmit = async (e) => {
+    e?.preventDefault?.();
     setError("");
-    if (!validateForm()) return;
+    const msg = validate();
+    if (msg) {
+      setError(msg);
+      return;
+    }
 
     setLoading(true);
     try {
       const res = await resetPassword({
         email,
         userId: userID,
-        newPassword
+        newPassword,
       });
 
-      if (res.message) {
-        alert("Password successfully updated. Please login.");
+      if (res?.message) {
+        toast.success("Password updated. Please sign in.");
         navigate("/login");
-      } else if (res.error) {
-        setError(res.error);
       } else {
-        setError("Reset password failed: " + JSON.stringify(res));
+        setError(res?.error || "Reset failed. Please try again.");
       }
     } catch (err) {
-      setError("Connection error: " + err.message);
+      setError(`Connection error: ${err.message}`);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleKeyPress = (e) => {
-    if (e.key === "Enter") {
-      handleResetPassword();
-    }
-  };
-
   return (
-    <div className="auth-container">
-      <div className="auth-form">
-        <h2>Reset Password</h2>
+    <AuthLayout
+      title="Reset your password"
+      subtitle="Verify your identity and choose a new password."
+    >
+      <form className="auth-form-stack" onSubmit={handleSubmit} noValidate>
+        {error && (
+          <div className="auth-form-error" role="alert">
+            <AlertCircle size={16} style={{ flexShrink: 0, marginTop: 1 }} />
+            <span>{error}</span>
+          </div>
+        )}
 
-        {error && <div className="error-message">{error}</div>}
-
-        <input
+        <Input
+          label="Email"
           type="email"
-          placeholder="Email"
+          required
+          placeholder="you@university.ac.th"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          onKeyPress={handleKeyPress}
           disabled={loading}
+          leadingIcon={<Mail size={16} />}
+          autoComplete="email"
         />
 
-        <input
-          type="text"
-          placeholder="User ID"
+        <Input
+          label="User ID"
+          required
+          placeholder="Institutional ID"
           value={userID}
           onChange={(e) => setUserID(e.target.value)}
-          onKeyPress={handleKeyPress}
           disabled={loading}
+          leadingIcon={<Hash size={16} />}
+          autoComplete="username"
         />
 
-        <input
-          type="password"
-          placeholder="New Password"
+        <Input
+          label="New password"
+          type={showPassword ? "text" : "password"}
+          required
+          placeholder="Create a strong password"
           value={newPassword}
           onChange={(e) => setNewPassword(e.target.value)}
-          onKeyPress={handleKeyPress}
           disabled={loading}
+          leadingIcon={<Lock size={16} />}
+          hint="At least 8 characters, with 1 uppercase letter and 1 number."
+          trailingIcon={
+            <button
+              type="button"
+              className="auth-pw-toggle"
+              onClick={() => setShowPassword((s) => !s)}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+              tabIndex={-1}
+            >
+              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
+          }
+          autoComplete="new-password"
         />
 
-        <input
-          type="password"
-          placeholder="Confirm New Password"
+        <Input
+          label="Confirm new password"
+          type={showPassword ? "text" : "password"}
+          required
+          placeholder="Re-enter your new password"
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
-          onKeyPress={handleKeyPress}
           disabled={loading}
+          leadingIcon={<Lock size={16} />}
+          autoComplete="new-password"
         />
 
-        <button onClick={handleResetPassword} disabled={loading}>
-          {loading ? "Loading..." : "Reset Password"}
-        </button>
+        <Button
+          type="submit"
+          variant="primary"
+          size="lg"
+          fullWidth
+          loading={loading}
+          leadingIcon={!loading && <KeyRound size={16} />}
+        >
+          {loading ? "Updating..." : "Update password"}
+        </Button>
 
-        <p className="auth-link">
-          Remembered your password? <Link to="/login">Login here</Link>
-        </p>
-      </div>
-    </div>
+        <div className="auth-form-foot">
+          <span>
+            Remembered your password? <Link to="/login">Sign in</Link>
+          </span>
+        </div>
+      </form>
+    </AuthLayout>
   );
 }

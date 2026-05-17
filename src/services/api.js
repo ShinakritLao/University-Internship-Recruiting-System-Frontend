@@ -113,3 +113,6 @@ export async function getMyNotifications() {
   return await res.json();
 }
 
+export const markNotificationRead = (id) =>
+  request(`/notifications/${id}/read`, "PUT");
+

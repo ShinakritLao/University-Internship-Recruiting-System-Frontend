@@ -1,5 +1,6 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { Toaster } from "sonner";
 import { getRedirectPath, isLoggedIn } from "./services/auth";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -26,6 +27,18 @@ function PrivateRoute({ children }) {
 function App() {
   return (
     <Router>
+      <Toaster
+        position="top-right"
+        richColors
+        closeButton
+        toastOptions={{
+          style: {
+            fontFamily: "var(--font-sans)",
+            borderRadius: "var(--radius-lg)",
+            fontSize: "var(--text-base)",
+          },
+        }}
+      />
       <Routes>
         <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
         <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
