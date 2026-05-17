@@ -327,7 +327,7 @@ function AllApplicationsTab() {
       <div className="section-header">
         <h2>All Applications</h2>
         <div className="filter-pills">
-          {["all", "submitted", "under-review", "accepted", "rejected"].map(f => (
+          {["all", "submitted", "under-review", "accepted", "rejected", "confirmed", "withdrawn"].map(f => (
             <button
               key={f}
               className={`filter-pill ${filter === f ? "active" : ""}`}

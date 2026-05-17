@@ -1,9 +1,15 @@
 /* ─── Layout ───────────────────────────────────────────────────────────────── */
+html, body {
+  margin: 0;
+  padding: 0;
+}
+
 .dashboard-container {
   min-height: 100vh;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   padding: 24px;
   font-family: 'Segoe UI', 'Arial', sans-serif;
+  margin: 0;
 }
 
 .dashboard-header {
@@ -192,6 +198,7 @@
 .status-badge.submitted    { background: #cfe2ff; color: #084298; }
 .status-badge.under-review { background: #fff3cd; color: #856404; }
 .status-badge.accepted     { background: #d1e7dd; color: #0f5132; }
+.status-badge.withdrawn    { background: #e9ecef; color: #495057; }
 
 /* ─── Tables ───────────────────────────────────────────────────────────────── */
 .data-table {
@@ -313,6 +320,19 @@
   font-size: 12px;
   font-weight: 600;
   transition: all 0.2s;
+}
+
+.btn-danger {
+  background: #dc2626;
+  color: white;
+  border: none;
+  padding: 10px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.btn-danger:hover {
+  opacity: 0.9;
 }
 
 .btn-reject:hover { background: #bb2d3b; transform: translateY(-1px); }
