@@ -1,770 +1,797 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { clearAuth, getEmail, getFirstName } from "../services/auth";
+import { useState, useEffect, useMemo } from "react";
+import {
+  Briefcase, FileText, User, Search, MapPin, Coins,
+  ExternalLink, Trash2, CheckCircle2, AlertCircle,
+  Mail, Hash, GraduationCap, Inbox, FileSearch, Sparkles,
+  Clock, CalendarClock, TrendingUp,
+} from "lucide-react";
+import { toast } from "sonner";
+
 import {
   getApprovedInternships,
   applyForInternship,
   getMyApplications,
   getMyProfile,
   confirmApplication,
-  getMyNotifications
+  getMyNotifications,
+  markNotificationRead,
+  deleteMyApplication,
 } from "../services/api";
 
+import { DashboardLayout } from "../components/layout";
+import {
+  Button, Card, CardBody, Input, Textarea, Modal, Table,
+  StatusBadge, EmptyState, Skeleton, FileZone,
+} from "../components/ui";
+import ConfirmDialog from "../components/ConfirmDialog";
 import Pagination, { paginate } from "../components/Pagination";
-import "../styles/dashboard.css";
+import { avatarVariant, avatarInitial, daysUntil, isRecent } from "../utils/format";
 
-const PAGE_SIZE = 5;
+import "../styles/pages.css";
+
+const PAGE_SIZE = 6;
+const CONFIRM_DEADLINE = new Date("2026-06-30T23:59:59");
+
+const NAV = [
+  { value: "internships", label: "Browse Internships", icon: <Briefcase size={16} /> },
+  { value: "applications", label: "My Applications", icon: <FileText size={16} /> },
+  { value: "profile", label: "Profile", icon: <User size={16} /> },
+];
+
+const TITLES = {
+  internships: { title: "Browse Internships", subtitle: "Discover staff-approved opportunities." },
+  applications: { title: "My Applications", subtitle: "Track the status of every application you've sent." },
+  profile: { title: "Profile", subtitle: "Your account details and confirmed program." },
+};
+
 
 export default function StudentDashboard() {
-  const navigate = useNavigate();
-  const email = getEmail() || "Student";
-  const firstName = getFirstName() || email;
+  const [activeNav, setActiveNav] = useState("internships");
   const [notifications, setNotifications] = useState([]);
-  const [showNotif, setShowNotif] = useState(false);
-
-  const [activeTab, setActiveTab] = useState("internships");
-  const unreadCount = notifications.filter(n => !n.is_read).length;
-
-  const handleLogout = () => {
-    clearAuth();
-    navigate("/login");
-  };
 
   useEffect(() => {
+    let cancelled = false;
     const fetchNotifications = async () => {
       const data = await getMyNotifications();
-      setNotifications(Array.isArray(data) ? data : []);
+      if (!cancelled) setNotifications(Array.isArray(data) ? data : []);
     };
-
     fetchNotifications();
-
-    const interval = setInterval(fetchNotifications, 10000); // auto refresh
-    return () => clearInterval(interval);
+    const interval = setInterval(fetchNotifications, 10000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
   }, []);
 
-  const markAsRead = async (id) => {
-    await fetch(`${import.meta.env.VITE_API_URL}/notifications/${id}/read`, {
-      method: "PUT",
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem("token")}`,
-      },
-    });
-
-    setNotifications(prev =>
-      prev.map(n =>
-        n.id === id ? { ...n, is_read: true } : n
-      )
+  const handleMarkRead = async (id) => {
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
     );
+    await markNotificationRead(id);
   };
 
-  const markAllAsRead = async () => {
-  const unread = notifications.filter(n => !n.is_read);
-
-    await Promise.all(
-      unread.map((n) =>
-        fetch(`${import.meta.env.VITE_API_URL}/notifications/${n.id}/read`, {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        })
-      )
-    );
-
-    setNotifications(prev =>
-      prev.map(n => ({ ...n, is_read: true }))
-    );
+  const handleMarkAllRead = async () => {
+    const unread = notifications.filter((n) => !n.is_read);
+    if (unread.length === 0) return;
+    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+    await Promise.all(unread.map((n) => markNotificationRead(n.id)));
   };
+
+  const meta = TITLES[activeNav];
 
   return (
-    <div className="dashboard-container">
-      <div className="dashboard-header">
-        <div>
-          <h1>Student Dashboard</h1>
-          <p className="dashboard-subtitle">
-            Browse internships and manage your applications
-          </p>
-        </div>
-        <div className="header-info" style={{ position: "relative" }}>
-
-          {/* 🔔 Bell Button */}
-          <button
-            onClick={() => {
-              const next = !showNotif;
-              setShowNotif(next);
-
-              if (next) {
-                markAllAsRead();
-              } else {
-                setShowNotif(false);
-              }
-            }}
-            style={{
-              position: "relative",
-              marginRight: 10,
-              fontSize: 18,
-              background: "transparent",
-              border: "none",
-              outline: "none",
-              boxShadow: "none",
-              WebkitAppearance: "none",
-              cursor: "pointer"
-            }}
-          >
-            🔔
-
-            {/* 🔴 unread badge */}
-            {notifications.filter(n => !n.is_read).length > 0 && (
-              <span
-                style={{
-                  position: "absolute",
-                  top: -5,
-                  right: -5,
-                  background: "red",
-                  color: "white",
-                  borderRadius: "50%",
-                  fontSize: 12,
-                  width: 18,
-                  height: 18,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center"
-                }}
-              >
-                {notifications.filter(n => !n.is_read).length}
-              </span>
-            )}
-          </button>
-
-          <span className="role-badge">Student</span>
-          <span className="email-info">Welcome, {firstName}</span>
-
-          <button onClick={handleLogout} className="logout-btn">
-            Logout
-          </button>
-
-          {/* 🔽 Notification dropdown */}
-          {showNotif && (
-            <div
-              style={{
-                position: "absolute",
-                top: 50,
-                right: 0,
-                width: 320,
-                background: "white",
-                border: "1px solid #ddd",
-                borderRadius: 10,
-                boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-                zIndex: 999
-              }}
-            >
-              <div style={{ padding: 10, borderBottom: "1px solid #eee" }}>
-                <strong>Notifications</strong>
-              </div>
-
-              <div style={{ maxHeight: 300, overflowY: "auto" }}>
-                {notifications.length === 0 ? (
-                  <div style={{ padding: 10 }}>No notifications</div>
-                ) : (
-                  notifications.map((n) => (
-                    <div
-                      key={n.id}
-                      onClick={() => markAsRead(n.id)}
-                      style={{
-                        padding: 10,
-                        borderBottom: "1px solid #f0f0f0",
-                        background: n.is_read ? "#fff" : "#f9f9f9",
-                        cursor: "pointer"
-                      }}
-                    >
-                      <div style={{ fontSize: 14 }}>{n.message}</div>
-                      <div style={{ fontSize: 12, color: "#888" }}>
-                        {new Date(n.created_at).toLocaleString()}
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          )}
-
-        </div>
-      </div>
-
-      <div className="tabs">
-        <button
-          className={`tab-btn ${activeTab === "internships" ? "active" : ""}`}
-          onClick={() => setActiveTab("internships")}
-        >
-          Internship Postings
-        </button>
-
-        <button
-          className={`tab-btn ${activeTab === "applications" ? "active" : ""}`}
-          onClick={() => setActiveTab("applications")}
-        >
-          My Applications
-        </button>
-
-        <button
-          className={`tab-btn ${activeTab === "profile" ? "active" : ""}`}
-          onClick={() => setActiveTab("profile")}
-        >
-          Profile
-        </button>
-      </div>
-
-      <div className="tab-content">
-        {activeTab === "internships" && <InternshipsTab />}
-        {activeTab === "applications" && <ApplicationsTab />}
-        {activeTab === "profile" && <ProfileTab />}
-      </div>
-    </div>
+    <DashboardLayout
+      pageTitle={meta.title}
+      pageSubtitle={meta.subtitle}
+      nav={NAV}
+      activeNavItem={activeNav}
+      onNavChange={setActiveNav}
+      notifications={{
+        items: notifications,
+        onMarkRead: handleMarkRead,
+        onMarkAllRead: handleMarkAllRead,
+      }}
+    >
+      {activeNav === "internships" && <InternshipsTab />}
+      {activeNav === "applications" && <ApplicationsTab />}
+      {activeNav === "profile" && <ProfileTab />}
+    </DashboardLayout>
   );
 }
 
-// ─────────────────────────────────────────────────────────────
-// Internship Postings Tab
-// ─────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────────────────
+// Browse Internships
+// ────────────────────────────────────────────────────────────────────────────
 
 function InternshipsTab() {
   const [internships, setInternships] = useState([]);
+  const [myApps, setMyApps] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-
   const [selected, setSelected] = useState(null);
 
-  const [description, setDescription] = useState("");
-  const [cv, setCv] = useState(null);
-  const [transcript, setTranscript] = useState(null);
-
-  const [submitting, setSubmitting] = useState(false);
-  const [message, setMessage] = useState("");
-
   useEffect(() => {
-    fetchInternships();
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      const [internshipData, appData] = await Promise.all([
+        getApprovedInternships(),
+        getMyApplications(),
+      ]);
+      if (!cancelled) {
+        setInternships(Array.isArray(internshipData) ? internshipData : []);
+        setMyApps(Array.isArray(appData) ? appData : []);
+        setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
   }, []);
 
-  const fetchInternships = async () => {
-    setLoading(true);
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return internships;
+    return internships.filter((p) =>
+      [p.title, p.location, p.description].some(
+        (v) => v && String(v).toLowerCase().includes(q)
+      )
+    );
+  }, [internships, search]);
 
-    const data = await getApprovedInternships();
+  useEffect(() => { setPage(1); }, [search]);
 
-    setInternships(Array.isArray(data) ? data : []);
+  const pageItems = paginate(filtered, page, PAGE_SIZE);
 
-    setLoading(false);
-  };
-
-  const handleApply = async () => {
-    if (!selected) return;
-
-    setMessage("");
-
-    const formData = new FormData();
-    formData.append("description", description);
-
-    if (cv) formData.append("cv", cv);
-    if (transcript) formData.append("transcript", transcript);
-
-    setSubmitting(true);
-
-    const res = await applyForInternship(selected.id, formData);
-
-    if (res.error) {
-      setMessage(res.error);
-    } else {
-      setMessage("Application submitted successfully!");
-      setDescription("");
-      setCv(null);
-      setTranscript(null);
-    }
-
-    setSubmitting(false);
-  };
-
-  if (loading) return <p>Loading internships...</p>;
-
-  const pageItems = paginate(internships, page, PAGE_SIZE);
+  const activeApps = myApps.filter(
+    (a) => !["withdrawn", "rejected"].includes(a.status)
+  ).length;
+  const acceptedApps = myApps.filter((a) => a.status === "accepted").length;
+  const daysLeft = daysUntil(CONFIRM_DEADLINE);
 
   return (
-    <div>
-      <div className="section-header">
-        <h2>Available Internship Postings</h2>
+    <section className="page-section">
+      <div className="stat-grid">
+        <div className="stat-tile stat-tile--violet">
+          <div className="stat-tile__head">
+            <span className="stat-tile__label">Open positions</span>
+            <span className="stat-tile__icon"><Briefcase size={20} /></span>
+          </div>
+          <span className="stat-tile__value">{internships.length}</span>
+          <span className="stat-tile__delta">approved &amp; accepting applications</span>
+        </div>
 
-        <span className="count-pill">
-          {internships.length} internships
+        <div className="stat-tile stat-tile--info">
+          <div className="stat-tile__head">
+            <span className="stat-tile__label">Active applications</span>
+            <span className="stat-tile__icon"><FileText size={20} /></span>
+          </div>
+          <span className="stat-tile__value">{activeApps}</span>
+          <span className="stat-tile__delta">
+            {acceptedApps > 0 ? `${acceptedApps} awaiting your confirmation` : "in submitted or review"}
+          </span>
+        </div>
+
+        <div className="stat-tile stat-tile--warning">
+          <div className="stat-tile__head">
+            <span className="stat-tile__label">Confirmation deadline</span>
+            <span className="stat-tile__icon"><CalendarClock size={20} /></span>
+          </div>
+          <span className="stat-tile__value">
+            {daysLeft}
+            <span style={{ fontSize: "var(--text-lg)", fontWeight: "var(--weight-medium)", color: "var(--color-text-muted)", marginLeft: 6 }}>
+              days
+            </span>
+          </span>
+          <span className="stat-tile__delta">until June 30, 2026</span>
+        </div>
+      </div>
+
+      <div className="filter-bar">
+        <div className="filter-bar__search">
+          <Input
+            placeholder="Search by title, location, or description"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            leadingIcon={<Search size={16} />}
+          />
+        </div>
+        <span style={{ fontSize: "var(--text-sm)", color: "var(--color-text-muted)" }}>
+          Showing {filtered.length} of {internships.length}
         </span>
       </div>
 
-      {internships.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-icon">📭</div>
-          <p>No internships available right now.</p>
+      {loading ? (
+        <div className="loading-grid">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Card key={i}>
+              <CardBody>
+                <Skeleton height={20} style={{ marginBottom: 8 }} />
+                <Skeleton variant="text" width="60%" style={{ marginBottom: 16 }} />
+                <Skeleton variant="text" width="100%" style={{ marginBottom: 6 }} />
+                <Skeleton variant="text" width="90%" style={{ marginBottom: 6 }} />
+                <Skeleton variant="text" width="40%" />
+              </CardBody>
+            </Card>
+          ))}
         </div>
+      ) : filtered.length === 0 ? (
+        <EmptyState
+          icon={<FileSearch size={22} />}
+          title={search ? "No matches" : "No internships available"}
+          description={
+            search
+              ? "Try a different search term."
+              : "Check back soon — new postings will appear here once they are approved."
+          }
+        />
       ) : (
         <>
-          <div className="posting-grid">
-            {pageItems.map((p) => (
-              <div className="posting-card" key={p.id}>
-                <div className="posting-card-header">
-                  <h4>{p.title}</h4>
-                  <span className="status-badge approved">
-                    {p.status}
-                  </span>
-                </div>
+          <div className="card-grid">
+            {pageItems.map((p) => {
+              const deadlinePassed = new Date(p.deadline) <= new Date();
+              const fresh = isRecent(p.created_at || p.createdAt);
+              const variant = avatarVariant(p.companyName || p.title);
+              const initial = avatarInitial(p.companyName || p.title);
+              return (
+                <Card key={p.id} className="posting-card">
+                  <CardBody>
+                    <div className="posting-head">
+                      <div className={`posting-avatar posting-avatar--${variant}`}>
+                        {initial}
+                      </div>
+                      <div className="posting-title-block">
+                        <h3 className="posting-title">{p.title}</h3>
+                        {p.companyName && (
+                          <p className="posting-company">{p.companyName}</p>
+                        )}
+                      </div>
+                      {fresh && (
+                        <span className="posting-new-tag">
+                          <Sparkles size={9} />
+                          New
+                        </span>
+                      )}
+                    </div>
 
-                <div className="posting-card-meta">
-                  <span>📍 {p.location}</span>
-                  <span>
-                    📅 Deadline:{" "}
-                    {new Date(p.deadline).toLocaleDateString()}
-                  </span>
-                  <span>
-                    💰 ฿
-                    {Number(p.paymentPerDay || 0).toLocaleString()} / day
-                  </span>
-                </div>
+                    <div className="meta-chips">
+                      {p.location && (
+                        <span className="meta-chip">
+                          <MapPin size={12} />
+                          {p.location}
+                        </span>
+                      )}
+                      {p.paymentPerDay != null && (
+                        <span className="meta-chip">
+                          <Coins size={12} />
+                          ฿{Number(p.paymentPerDay).toLocaleString()} / day
+                        </span>
+                      )}
+                    </div>
 
-                <p>{p.description}</p>
+                    <p className="posting-description">{p.description}</p>
 
-                <div className="posting-card-actions">
-                  {new Date(p.deadline) > new Date() ? (
-                    <button
-                      className="btn-primary"
-                      onClick={() => {
-                        setSelected(p);
-                        setMessage(""); // 🔥 THIS is the missing piece
-                      }}
-                    >
-                      Apply Now
-                    </button>
-                  ) : (
-                    <button className="btn-secondary" disabled>
-                      Deadline Passed
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
+                    <div className="posting-foot">
+                      <span className="posting-foot__deadline">
+                        <Clock size={12} />
+                        {deadlinePassed
+                          ? "Closed"
+                          : `Apply by ${new Date(p.deadline).toLocaleDateString()}`}
+                      </span>
+                      <Button
+                        variant={deadlinePassed ? "secondary" : "primary"}
+                        size="sm"
+                        disabled={deadlinePassed}
+                        onClick={() => setSelected(p)}
+                      >
+                        {deadlinePassed ? "Closed" : "Apply now"}
+                      </Button>
+                    </div>
+                  </CardBody>
+                </Card>
+              );
+            })}
           </div>
 
           <Pagination
             page={page}
             pageSize={PAGE_SIZE}
-            total={internships.length}
+            total={filtered.length}
             onChange={setPage}
           />
         </>
       )}
 
-      {selected && (
-        <div
-          className="modal-backdrop"
-          onClick={() => setSelected(null)}
-        >
-          <div
-            className="modal-card"
-            style={{ maxWidth: 600 }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3>Apply for Internship</h3>
-
-            <p className="modal-message">
-              Applying for: <strong>{selected.title}</strong>
-            </p>
-
-            {message && (
-              <div
-                className={
-                  message.includes("success")
-                    ? "success-msg"
-                    : "error-msg"
-                }
-              >
-                {message}
-              </div>
-            )}
-
-            <div className="form-group">
-              <label>Why are you interested?</label>
-
-              <textarea
-                placeholder="Describe yourself and your interests..."
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Upload CV (PDF)</label>
-
-              <input
-                type="file"
-                accept="application/pdf"
-                onChange={(e) => setCv(e.target.files[0])}
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Upload Transcript (PDF)</label>
-
-              <input
-                type="file"
-                accept="application/pdf"
-                onChange={(e) => setTranscript(e.target.files[0])}
-              />
-            </div>
-
-            <div className="modal-actions">
-              <button
-                className="btn-secondary"
-                onClick={() => setSelected(null)}
-              >
-                Cancel
-              </button>
-
-              <button
-                className="btn-primary"
-                onClick={handleApply}
-                disabled={submitting}
-              >
-                {submitting ? "Submitting..." : "Submit Application"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+      <ApplyModal
+        internship={selected}
+        onClose={() => setSelected(null)}
+      />
+    </section>
   );
 }
 
-// ─────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────────────────
+// Apply Modal
+// ────────────────────────────────────────────────────────────────────────────
+
+function ApplyModal({ internship, onClose }) {
+  const [description, setDescription] = useState("");
+  const [cv, setCv] = useState(null);
+  const [transcript, setTranscript] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (internship) {
+      setDescription("");
+      setCv(null);
+      setTranscript(null);
+      setError("");
+      setSubmitting(false);
+    }
+  }, [internship]);
+
+  const handleApply = async () => {
+    setError("");
+    if (!description.trim()) {
+      setError("Please tell the company why you're interested.");
+      return;
+    }
+    if (!cv) {
+      setError("Please upload your CV.");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("description", description);
+    formData.append("cv", cv);
+    if (transcript) formData.append("transcript", transcript);
+
+    setSubmitting(true);
+    const res = await applyForInternship(internship.id, formData);
+    setSubmitting(false);
+
+    if (res?.error) {
+      setError(res.error);
+    } else {
+      toast.success("Application submitted!");
+      onClose();
+    }
+  };
+
+  return (
+    <Modal
+      open={!!internship}
+      onClose={submitting ? undefined : onClose}
+      title={internship ? `Apply for ${internship.title}` : ""}
+      size="lg"
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose} disabled={submitting}>
+            Cancel
+          </Button>
+          <Button variant="primary" onClick={handleApply} loading={submitting}>
+            Submit application
+          </Button>
+        </>
+      }
+    >
+      {error && (
+        <div className="notice notice--danger" style={{ marginBottom: "var(--space-4)" }}>
+          <AlertCircle size={16} className="notice__icon" />
+          <div className="notice__body">{error}</div>
+        </div>
+      )}
+
+      <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
+        <Textarea
+          label="Why are you interested?"
+          required
+          rows={4}
+          placeholder="Describe your background, motivation, and what you hope to learn..."
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          disabled={submitting}
+        />
+
+        <FileZone
+          label="CV (PDF, required)"
+          file={cv}
+          onChange={setCv}
+        />
+
+        <FileZone
+          label="Transcript (PDF, optional)"
+          file={transcript}
+          onChange={setTranscript}
+        />
+      </div>
+    </Modal>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────────────────
 // Applications Tab
-// ─────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────────────────
 
 function ApplicationsTab() {
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
-
   const [selected, setSelected] = useState(null);
+  const [confirmAction, setConfirmAction] = useState(null); // { type, app }
 
-  useEffect(() => {
-    fetchApplications();
-  }, []);
-
-  const fetchApplications = async () => {
+  const refresh = async () => {
     setLoading(true);
-
     const data = await getMyApplications();
-
     setApplications(Array.isArray(data) ? data : []);
-
     setLoading(false);
   };
 
-  const handleConfirm = async (applicationId) => {
-  const confirmed = window.confirm(
-    "Are you sure you want to confirm this internship?\nYou can only belong to ONE company."
-  );
+  useEffect(() => { refresh(); }, []);
 
-  if (!confirmed) return;
-
-  const res = await confirmApplication(applicationId);
-
-    if (res.error) {
-      alert(res.error);
+  const handleConfirmInternship = async () => {
+    const app = confirmAction.app;
+    const res = await confirmApplication(app.id);
+    if (res?.error) {
+      toast.error(res.error);
+      setConfirmAction(null);
       return;
     }
-
-    alert("Internship confirmed successfully!");
-
+    toast.success("Internship confirmed!");
+    setConfirmAction(null);
     setSelected(null);
-
-    fetchApplications();
+    refresh();
   };
 
-  const handleDelete = async (id) => {
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this application?"
-    );
-
-    if (!confirmed) return;
-
-    try {
-      const res = await fetch(
-        `${import.meta.env.VITE_API_URL}/applications/${id}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
-
-      const data = await res.json();
-
-      if (data.error) {
-        alert(data.error);
-        return;
-      }
-
-      setApplications(
-        applications.filter((app) => app.id !== id)
-      );
-
-      setSelected(null);
-
-      alert("Application deleted");
-    } catch (err) {
-      alert("Failed to delete application");
+  const handleDelete = async () => {
+    const app = confirmAction.app;
+    const res = await deleteMyApplication(app.id);
+    if (res?.error) {
+      toast.error(res.error);
+      setConfirmAction(null);
+      return;
     }
+    toast.success("Application deleted.");
+    setConfirmAction(null);
+    setSelected(null);
+    refresh();
   };
 
-  if (loading) return <p>Loading applications...</p>;
+  if (loading) {
+    return (
+      <Card>
+        <CardBody>
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} height={36} style={{ marginBottom: 8 }} />
+          ))}
+        </CardBody>
+      </Card>
+    );
+  }
+
+  if (applications.length === 0) {
+    return (
+      <EmptyState
+        icon={<Inbox size={22} />}
+        title="No applications yet"
+        description="Once you apply for an internship, you'll see it here with its current status."
+      />
+    );
+  }
+
+  const counts = applications.reduce((acc, a) => {
+    acc.total += 1;
+    if (a.status === "submitted" || a.status === "under-review") acc.review += 1;
+    if (a.status === "accepted") acc.accepted += 1;
+    if (a.status === "confirmed") acc.confirmed += 1;
+    return acc;
+  }, { total: 0, review: 0, accepted: 0, confirmed: 0 });
 
   return (
-    <div>
-      <div className="section-header">
-        <h2>My Applications</h2>
+    <section className="page-section">
+      <div className="stat-grid">
+        <div className="stat-tile">
+          <div className="stat-tile__head">
+            <span className="stat-tile__label">Total submitted</span>
+            <span className="stat-tile__icon"><FileText size={20} /></span>
+          </div>
+          <span className="stat-tile__value">{counts.total}</span>
+          <span className="stat-tile__delta">across all internships</span>
+        </div>
+        <div className="stat-tile stat-tile--info">
+          <div className="stat-tile__head">
+            <span className="stat-tile__label">In review</span>
+            <span className="stat-tile__icon"><Clock size={20} /></span>
+          </div>
+          <span className="stat-tile__value">{counts.review}</span>
+          <span className="stat-tile__delta">awaiting company decision</span>
+        </div>
+        <div className="stat-tile stat-tile--warning">
+          <div className="stat-tile__head">
+            <span className="stat-tile__label">Accepted</span>
+            <span className="stat-tile__icon"><TrendingUp size={20} /></span>
+          </div>
+          <span className="stat-tile__value">{counts.accepted}</span>
+          <span className="stat-tile__delta">ready for you to confirm</span>
+        </div>
+        <div className="stat-tile stat-tile--success">
+          <div className="stat-tile__head">
+            <span className="stat-tile__label">Confirmed</span>
+            <span className="stat-tile__icon"><CheckCircle2 size={20} /></span>
+          </div>
+          <span className="stat-tile__value">{counts.confirmed}</span>
+          <span className="stat-tile__delta">{counts.confirmed > 0 ? "your secured offer" : "you can confirm one"}</span>
+        </div>
       </div>
 
-      {applications.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-icon">📄</div>
-          <p>You have not applied to any internships yet.</p>
-        </div>
-      ) : (
-        <>
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Internship</th>
-                <th>Applied On</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {applications.map((app) => (
-                <tr
-                  key={app.id}
-                  onClick={() => setSelected(app)}
-                  style={{ cursor: "pointer" }}
-                >
-                  <td>{app.internshipTitle}</td>
-
-                  <td>
-                    {new Date(app.applyDate).toLocaleDateString()}
-                  </td>
-
-                  <td>
-                    <span className={`status-badge ${app.status}`}>
-                      {app.status}
-                    </span>
-                  </td>
-
-                  <td
-                    style={{
-                      cursor: "pointer",
-                      fontWeight: 600,
-                      color: "#2563eb",
-                    }}
-                    onClick={() => setSelected(app)}
-                  >
-                    
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          {selected && (
-            <div
-              className="modal-backdrop"
-              onClick={() => setSelected(null)}
+      <Table>
+        <Table.Head>
+          <Table.Row>
+            <Table.HeaderCell>Internship</Table.HeaderCell>
+            <Table.HeaderCell>Applied on</Table.HeaderCell>
+            <Table.HeaderCell>Status</Table.HeaderCell>
+            <Table.HeaderCell style={{ textAlign: "right" }}>Action</Table.HeaderCell>
+          </Table.Row>
+        </Table.Head>
+        <Table.Body>
+          {applications.map((app) => (
+            <Table.Row
+              key={app.id}
+              onClick={() => setSelected(app)}
+              style={{ cursor: "pointer" }}
             >
-              <div
-                className="modal-card"
-                style={{ maxWidth: 700 }}
-                onClick={(e) => e.stopPropagation()}
-              >
-                <h3>Application Details</h3>
-
-                <div className="detail-grid">
-                  <div>
-                    <strong>Internship:</strong>{" "}
-                    {selected.internshipTitle}
-                  </div>
-
-                  <div>
-                    <strong>Status:</strong>{" "}
-                    {selected.status}
-                  </div>
-
-                  <div>
-                    <strong>Applied Date:</strong>{" "}
-                    {new Date(
-                      selected.applyDate
-                    ).toLocaleDateString()}
-                  </div>
-                </div>
-
-                <div
-                  className="form-group"
-                  style={{ marginTop: 20 }}
+              <Table.Cell style={{ fontWeight: "var(--weight-medium)" }}>
+                {app.internshipTitle}
+              </Table.Cell>
+              <Table.Cell style={{ color: "var(--color-text-muted)" }}>
+                {new Date(app.applyDate).toLocaleDateString()}
+              </Table.Cell>
+              <Table.Cell>
+                <StatusBadge status={app.status} />
+              </Table.Cell>
+              <Table.Cell style={{ textAlign: "right" }}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelected(app);
+                  }}
                 >
-                  <label>Description</label>
+                  View
+                </Button>
+              </Table.Cell>
+            </Table.Row>
+          ))}
+        </Table.Body>
+      </Table>
 
-                  <div
-                    style={{
-                      background: "#f5f5f5",
-                      padding: 12,
-                      borderRadius: 8,
-                    }}
-                  >
-                    {selected.description || "No description"}
-                  </div>
-                </div>
+      <ApplicationDetailModal
+        application={selected}
+        onClose={() => setSelected(null)}
+        onAskConfirm={(app) => setConfirmAction({ type: "confirm", app })}
+        onAskDelete={(app) => setConfirmAction({ type: "delete", app })}
+      />
 
-                <div
-                  className="form-group"
-                  style={{ marginTop: 20 }}
-                >
-                  <label>Uploaded Documents</label>
+      <ConfirmDialog
+        open={confirmAction?.type === "confirm"}
+        title="Confirm this internship?"
+        message="You can only confirm ONE internship across all your applications. This cannot be undone after the June 30, 2026 deadline."
+        confirmLabel="Yes, confirm"
+        confirmVariant="primary"
+        onConfirm={handleConfirmInternship}
+        onCancel={() => setConfirmAction(null)}
+      />
 
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: 12,
-                      flexWrap: "wrap",
-                    }}
-                  >
-                    {selected.cvPath && (
-                      <a
-                        href={selected.cvPath}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="btn-secondary"
-                      >
-                        View CV
-                      </a>
-                    )}
-
-                    {selected.transcriptPath && (
-                      <a
-                        href={selected.transcriptPath}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="btn-secondary"
-                      >
-                        View Transcript
-                      </a>
-                    )}
-                  </div>
-                </div>
-
-                <div
-                  className="modal-actions"
-                  style={{ marginTop: 24 }}
-                >
-                  <button
-                    className="btn-secondary"
-                    onClick={() => setSelected(null)}
-                  >
-                    Close
-                  </button>
-
-                  {selected.status == "accepted" && (
-                    <button
-                      className="btn-primary"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleConfirm(selected.id);
-                      }}
-                    >
-                      Confirm Internship
-                    </button>
-                  )}
-
-                  {(selected.status === "submitted" ||
-                    selected.status === "under-review") && (
-                    <button
-                      className="btn-danger"
-                      onClick={() => handleDelete(selected.id)}
-                    >
-                      Delete Application
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-        </>
-      )}
-    </div>
+      <ConfirmDialog
+        open={confirmAction?.type === "delete"}
+        title="Delete this application?"
+        message="The company will no longer see your application. This action cannot be undone."
+        confirmLabel="Delete"
+        confirmVariant="danger"
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmAction(null)}
+      />
+    </section>
   );
 }
 
-// ─────────────────────────────────────────────────────────────
+function ApplicationDetailModal({ application, onClose, onAskConfirm, onAskDelete }) {
+  if (!application) return null;
+  const canConfirm = application.status === "accepted";
+  const canDelete =
+    application.status === "submitted" || application.status === "under-review";
+
+  return (
+    <Modal
+      open={!!application}
+      onClose={onClose}
+      title="Application details"
+      size="lg"
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose}>Close</Button>
+          {canDelete && (
+            <Button
+              variant="danger"
+              leadingIcon={<Trash2 size={14} />}
+              onClick={() => onAskDelete(application)}
+            >
+              Delete
+            </Button>
+          )}
+          {canConfirm && (
+            <Button
+              variant="primary"
+              leadingIcon={<CheckCircle2 size={14} />}
+              onClick={() => onAskConfirm(application)}
+            >
+              Confirm internship
+            </Button>
+          )}
+        </>
+      }
+    >
+      <div className="detail-grid" style={{ marginBottom: "var(--space-5)" }}>
+        <div className="detail-item">
+          <span className="detail-item__label">Internship</span>
+          <span className="detail-item__value">{application.internshipTitle}</span>
+        </div>
+        <div className="detail-item">
+          <span className="detail-item__label">Status</span>
+          <span className="detail-item__value">
+            <StatusBadge status={application.status} />
+          </span>
+        </div>
+        <div className="detail-item">
+          <span className="detail-item__label">Applied on</span>
+          <span className="detail-item__value">
+            {new Date(application.applyDate).toLocaleDateString()}
+          </span>
+        </div>
+      </div>
+
+      <div style={{ marginBottom: "var(--space-5)" }}>
+        <span className="detail-item__label" style={{ display: "block", marginBottom: 6 }}>
+          Your message
+        </span>
+        <div
+          style={{
+            background: "var(--color-neutral-50)",
+            border: "1px solid var(--color-border)",
+            borderRadius: "var(--radius-md)",
+            padding: "var(--space-3) var(--space-4)",
+            fontSize: "var(--text-sm)",
+            color: "var(--color-text)",
+            lineHeight: "var(--leading-normal)",
+            whiteSpace: "pre-wrap",
+          }}
+        >
+          {application.description || "(no description provided)"}
+        </div>
+      </div>
+
+      <div>
+        <span className="detail-item__label" style={{ display: "block", marginBottom: 8 }}>
+          Uploaded documents
+        </span>
+        <div style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap" }}>
+          {application.cvPath && (
+            <a
+              href={application.cvPath}
+              target="_blank"
+              rel="noreferrer"
+              className="doc-link"
+            >
+              <ExternalLink size={14} />
+              View CV
+            </a>
+          )}
+          {application.transcriptPath && (
+            <a
+              href={application.transcriptPath}
+              target="_blank"
+              rel="noreferrer"
+              className="doc-link"
+            >
+              <ExternalLink size={14} />
+              View Transcript
+            </a>
+          )}
+          {!application.cvPath && !application.transcriptPath && (
+            <span style={{ fontSize: "var(--text-sm)", color: "var(--color-text-muted)" }}>
+              No documents attached.
+            </span>
+          )}
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────────────────
 // Profile Tab
-// ─────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────────────────
 
 function ProfileTab() {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchProfile();
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      const data = await getMyProfile();
+      if (!cancelled) {
+        setProfile(data?.error ? null : data);
+        setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
   }, []);
 
-  const fetchProfile = async () => {
-    setLoading(true);
-
-    const data = await getMyProfile();
-
-    setProfile(data);
-
-    setLoading(false);
-  };
-
-  if (loading) return <p>Loading profile...</p>;
-
-  if (!profile) {
+  if (loading) {
     return (
-      <div className="empty-state">
-        <p>Unable to load profile.</p>
-      </div>
+      <Card>
+        <CardBody>
+          <Skeleton height={20} width="40%" style={{ marginBottom: 12 }} />
+          <Skeleton variant="text" width="60%" style={{ marginBottom: 6 }} />
+          <Skeleton variant="text" width="50%" />
+        </CardBody>
+      </Card>
     );
   }
 
+  if (!profile) {
+    return (
+      <EmptyState
+        title="Unable to load profile"
+        description="Please try refreshing the page."
+      />
+    );
+  }
+
+  const hasInternship = Boolean(profile.internship);
+
   return (
-    <div>
-      <div className="section-header">
-        <h2>My Profile</h2>
-      </div>
-
-      <div className="form-card">
-        <div className="detail-grid">
-          <div>
-            <strong>Full Name:</strong> {profile.name}
+    <section className="page-section">
+      <Card>
+        <CardBody>
+          <div className="detail-grid">
+            <div className="detail-item">
+              <span className="detail-item__label">Full Name</span>
+              <span className="detail-item__value">
+                <User size={14} style={{ verticalAlign: "-2px", marginRight: 6, color: "var(--color-text-muted)" }} />
+                {profile.name}
+              </span>
+            </div>
+            <div className="detail-item">
+              <span className="detail-item__label">Email</span>
+              <span className="detail-item__value">
+                <Mail size={14} style={{ verticalAlign: "-2px", marginRight: 6, color: "var(--color-text-muted)" }} />
+                {profile.email}
+              </span>
+            </div>
+            <div className="detail-item">
+              <span className="detail-item__label">Student ID</span>
+              <span className="detail-item__value">
+                <Hash size={14} style={{ verticalAlign: "-2px", marginRight: 6, color: "var(--color-text-muted)" }} />
+                {profile.studentId}
+              </span>
+            </div>
+            <div className="detail-item">
+              <span className="detail-item__label">Internship Program</span>
+              <span className="detail-item__value">
+                <GraduationCap size={14} style={{ verticalAlign: "-2px", marginRight: 6, color: "var(--color-text-muted)" }} />
+                {hasInternship ? profile.internship : (
+                  <span style={{ color: "var(--color-text-muted)", fontWeight: "var(--weight-regular)" }}>
+                    No internship confirmed yet
+                  </span>
+                )}
+              </span>
+            </div>
           </div>
-
-          <div>
-            <strong>Email:</strong> {profile.email}
-          </div>
-
-          <div>
-            <strong>Student ID:</strong> {profile.studentId}
-          </div>
-
-          <div>
-            <strong>Internship Program:</strong>{" "}
-            {profile.internship
-              ? profile.internship
-              : "No internship program confirmed"}
-          </div>
-        </div>
-      </div>
-    </div>
+        </CardBody>
+      </Card>
+    </section>
   );
 }

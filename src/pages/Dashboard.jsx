@@ -1,27 +1,12 @@
-import { useNavigate } from "react-router-dom";
-import { clearAuth, getEmail } from "../services/auth";
-import "../styles/dashboard.css";
+import { useEffect } from "react";
+import { Navigate, useNavigate } from "react-router-dom";
+import { getRedirectPath } from "../services/auth";
 
+/**
+ * Generic /dashboard fallback — immediately routes the user to their
+ * role-specific dashboard. Unauthenticated users get sent to /login.
+ */
 export default function Dashboard() {
-  const navigate = useNavigate();
-  const email = getEmail() || "User";
-
-  const handleLogout = () => {
-    clearAuth();
-    navigate("/login");
-  };
-
-  return (
-    <div className="dashboard-container">
-      <div className="dashboard-header">
-        <h1>Welcome, {email}!</h1>
-        <button onClick={handleLogout} className="logout-btn">
-          Logout
-        </button>
-      </div>
-      <div className="dashboard-content">
-        <p>You are successfully logged in.</p>
-      </div>
-    </div>
-  );
+  const target = getRedirectPath() || "/login";
+  return <Navigate to={target} replace />;
 }

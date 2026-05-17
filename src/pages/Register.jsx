@@ -1,176 +1,208 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import {
+  Mail, Hash, Lock, Eye, EyeOff, User, AlertCircle, UserPlus,
+} from "lucide-react";
+import { toast } from "sonner";
 import { register } from "../services/api";
-import { isStrongPassword, passwordRequirementsMessage } from "../services/validation";
-import "../styles/auth.css";
+import {
+  isStrongPassword,
+  passwordRequirementsMessage,
+} from "../services/validation";
+import { AuthLayout } from "../components/layout";
+import { Input, Button } from "../components/ui";
+
+function detectRoleHint(id) {
+  const len = id.trim().length;
+  if (len === 11) return { role: "Student", tone: "ok" };
+  if (len === 8) return { role: "Company", tone: "ok" };
+  if (len === 9) return { role: "Staff", tone: "ok" };
+  if (len === 0) return null;
+  return { role: null, tone: "warn" };
+}
 
 export default function Register() {
+  const navigate = useNavigate();
   const [form, setForm] = useState({
-    email: "",
-    password: "",
-    confirm_password: "",
     first_name: "",
     last_name: "",
-    user_id: ""
+    email: "",
+    user_id: "",
+    password: "",
+    confirm_password: "",
   });
-  
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
 
-  const handleChange = (e) => {
-    setForm({
-      ...form,
-      [e.target.name]: e.target.value
-    });
+  const set = (field) => (e) =>
+    setForm((prev) => ({ ...prev, [field]: e.target.value }));
+
+  const validate = () => {
+    if (!form.first_name.trim()) return "Please enter your first name.";
+    if (!form.last_name.trim()) return "Please enter your last name.";
+    if (!form.email.trim()) return "Please enter your email.";
+    if (!form.email.includes("@")) return "Please enter a valid email.";
+    if (!form.user_id.trim()) return "Please enter your user ID.";
+    if (!form.password.trim()) return "Please enter a password.";
+    if (!isStrongPassword(form.password)) return passwordRequirementsMessage();
+    if (form.password !== form.confirm_password) return "Passwords do not match.";
+    return null;
   };
 
-  const validateForm = () => {
-    if (!form.first_name.trim()) {
-      setError("Please enter first name");
-      return false;
-    }
-    if (!form.last_name.trim()) {
-      setError("Please enter last name");
-      return false;
-    }
-    if (!form.email.trim()) {
-      setError("Please enter email");
-      return false;
-    }
-    if (!form.email.includes("@")) {
-      setError("Please enter valid email");
-      return false;
-    }
-    if (!form.user_id.trim()) {
-      setError("Please enter user ID");
-      return false;
-    }
-    if (!form.password.trim()) {
-      setError("Please enter password");
-      return false;
-    }
-    if (!isStrongPassword(form.password)) {
-      setError(passwordRequirementsMessage());
-      return false;
-    }
-    if (form.password !== form.confirm_password) {
-      setError("Passwords do not match");
-      return false;
-    }
-    return true;
-  };
-
-  const handleRegister = async () => {
+  const handleSubmit = async (e) => {
+    e?.preventDefault?.();
     setError("");
-    if (!validateForm()) return;
+    const msg = validate();
+    if (msg) {
+      setError(msg);
+      return;
+    }
 
     setLoading(true);
     try {
-      const submitData = {
+      const res = await register({
         email: form.email,
         password: form.password,
         firstName: form.first_name,
         lastName: form.last_name,
-        userId: form.user_id
-      };
+        userId: form.user_id,
+      });
 
-      const res = await register(submitData);
-      console.log("Register response:", res);
-
-      if (res.message || res.status === "success" || res.id) {
-        alert("Register success! Please login");
+      if (res?.message || res?.status === "success" || res?.id) {
+        toast.success("Account created. Please sign in.");
         navigate("/login");
-      } else if (res.error) {
-        setError(res.error);
       } else {
-        setError("Register failed: " + JSON.stringify(res));
+        setError(res?.error || "Registration failed. Please try again.");
       }
     } catch (err) {
-      console.error("Register error:", err);
-      setError("Connection error: " + err.message);
+      setError(`Connection error: ${err.message}`);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleKeyPress = (e) => {
-    if (e.key === "Enter") {
-      handleRegister();
-    }
-  };
+  const roleHint = detectRoleHint(form.user_id);
+  const userIdHint = roleHint
+    ? roleHint.role
+      ? `Detected role: ${roleHint.role}`
+      : "ID length should be 8 (company), 9 (staff), or 11 (student)."
+    : "Your role is detected from your institutional ID length.";
 
   return (
-    <div className="auth-container">
-      <div className="auth-form">
-        <h2>Register</h2>
-        
-        {error && <div className="error-message">{error}</div>}
+    <AuthLayout
+      title="Create your account"
+      subtitle="Join the platform to discover and manage internships."
+      wide
+    >
+      <form className="auth-form-stack" onSubmit={handleSubmit} noValidate>
+        {error && (
+          <div className="auth-form-error" role="alert">
+            <AlertCircle size={16} style={{ flexShrink: 0, marginTop: 1 }} />
+            <span>{error}</span>
+          </div>
+        )}
 
-        <input
-          type="text"
-          name="first_name"
-          placeholder="First Name"
-          value={form.first_name}
-          onChange={handleChange}
-          disabled={loading}
-        />
-        
-        <input
-          type="text"
-          name="last_name"
-          placeholder="Last Name"
-          value={form.last_name}
-          onChange={handleChange}
-          disabled={loading}
-        />
-        
-        <input
+        <div className="auth-form-row">
+          <Input
+            label="First name"
+            required
+            placeholder="Jane"
+            value={form.first_name}
+            onChange={set("first_name")}
+            disabled={loading}
+            leadingIcon={<User size={16} />}
+            autoComplete="given-name"
+          />
+          <Input
+            label="Last name"
+            required
+            placeholder="Doe"
+            value={form.last_name}
+            onChange={set("last_name")}
+            disabled={loading}
+            leadingIcon={<User size={16} />}
+            autoComplete="family-name"
+          />
+        </div>
+
+        <Input
+          label="Email"
           type="email"
-          name="email"
-          placeholder="Email"
+          required
+          placeholder="you@university.ac.th"
           value={form.email}
-          onChange={handleChange}
+          onChange={set("email")}
           disabled={loading}
+          leadingIcon={<Mail size={16} />}
+          autoComplete="email"
         />
-        
-        <input
-          type="text"
-          name="user_id"
-          placeholder="User ID"
+
+        <Input
+          label="User ID"
+          required
+          placeholder="Institutional ID"
           value={form.user_id}
-          onChange={handleChange}
+          onChange={set("user_id")}
           disabled={loading}
+          leadingIcon={<Hash size={16} />}
+          hint={userIdHint}
+          autoComplete="username"
         />
-        
-        <input
-          type="password"
-          name="password"
-          placeholder="Password"
+
+        <Input
+          label="Password"
+          type={showPassword ? "text" : "password"}
+          required
+          placeholder="Create a strong password"
           value={form.password}
-          onChange={handleChange}
-          onKeyPress={handleKeyPress}
+          onChange={set("password")}
           disabled={loading}
+          leadingIcon={<Lock size={16} />}
+          hint="At least 8 characters, with 1 uppercase letter and 1 number."
+          trailingIcon={
+            <button
+              type="button"
+              className="auth-pw-toggle"
+              onClick={() => setShowPassword((s) => !s)}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+              tabIndex={-1}
+            >
+              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
+          }
+          autoComplete="new-password"
         />
 
-        <input
-          type="password"
-          name="confirm_password"
-          placeholder="Confirm Password"
+        <Input
+          label="Confirm password"
+          type={showPassword ? "text" : "password"}
+          required
+          placeholder="Re-enter your password"
           value={form.confirm_password}
-          onChange={handleChange}
-          onKeyPress={handleKeyPress}
+          onChange={set("confirm_password")}
           disabled={loading}
+          leadingIcon={<Lock size={16} />}
+          autoComplete="new-password"
         />
 
-        <button onClick={handleRegister} disabled={loading}>
-          {loading ? "Loading..." : "Register"}
-        </button>
+        <Button
+          type="submit"
+          variant="primary"
+          size="lg"
+          fullWidth
+          loading={loading}
+          leadingIcon={!loading && <UserPlus size={16} />}
+        >
+          {loading ? "Creating account..." : "Create account"}
+        </Button>
 
-        <p className="auth-link">
-          Have account? <Link to="/login">Login here</Link>
-        </p>
-      </div>
-    </div>
+        <div className="auth-form-foot">
+          <span>
+            Already have an account? <Link to="/login">Sign in</Link>
+          </span>
+        </div>
+      </form>
+    </AuthLayout>
   );
 }
