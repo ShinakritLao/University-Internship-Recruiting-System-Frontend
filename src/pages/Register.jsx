@@ -159,7 +159,7 @@ export default function Register() {
           onChange={set("password")}
           disabled={loading}
           leadingIcon={<Lock size={16} />}
-          hint="At least 8 characters, with 1 uppercase letter and 1 number."
+          hint="At least 8 characters, with 1 uppercase letter and 2 numbers."
           trailingIcon={
             <button
               type="button"

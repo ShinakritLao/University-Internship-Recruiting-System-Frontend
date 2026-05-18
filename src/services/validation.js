@@ -3,10 +3,10 @@ export function isStrongPassword(password) {
     typeof password === "string" &&
     password.length >= 8 &&
     /[A-Z]/.test(password) &&
-    /[0-9]/.test(password)
+    /[0-9].*[0-9]/.test(password)
   );
 }
 
 export function passwordRequirementsMessage() {
-  return "Password must be at least 8 characters long, include at least one uppercase letter and one number.";
+  return "Password must be at least 8 characters long, include at least one uppercase letter and two numbers.";
 }

@@ -26,3 +26,10 @@ dist-ssr
 *.sw?
 .vercel
 .env*.local
+
+# Playwright
+tests/
+playwright.config.js
+test-results/
+playwright-report/
+playwright/.cache/
